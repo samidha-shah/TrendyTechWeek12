@@ -1,0 +1,276 @@
+Week-12 Programs 
+
+Session 9
+===========
+
+How to write output to target location - Sink 
+==============================================
+
+
+object SparkSqlExample extends App {
+
+//spark session with spark conf
+
+val sparkconf= new SparkConf()
+sparkconf.set("spark.app.name","week12")
+sparkconf.set("spark.master","local[*]")
+
+val spark = SparkSession.builder()
+.config(sparkconf)
+.getOrCreate()
+
+
+
+//Standered format for dataframe reader 
+
+val ordersDf = spark.read
+               .format("csv")
+               .option("header",true)
+               .option("inferScema",true)
+               .option("path","")
+               .load
+
+orderDf.show() //default is 20 records 
+
+//how to check num of partitions .
+//rdd has property getNumPartitions. convert DF to //rdd and check the partition
+
+
+print("orderDf has"+orderDf.rdd.getNumPartitions)
+
+//if we want repartition into 4 
+
+val orderRep = orderDf.repartition(4)
+
+//After change
+
+print("orderRep has"+orderRep.rdd.getNumPartitions)
+
+//Standered format for dataframe writer API
+
+//we want to store output in a file 
+
+orderDf.write
+ .format("csv")  // json,avro.Bydefault it is parquet.
+ .mode(Savemode.Overwrite)
+ .option("path","") //where we want to store 
+ .save()
+
+//repartition(no of files = no of partition )
+//break the files into  equal parts so full shuffling //is there always .(a lot of shuffling is required)
+//if we want to change the no of files so convert //itinto repartition(2)
+
+
+orderRep.write
+ .format("csv")  // json,avro.Bydefault it is parquet.
+ .mode(Savemode.Overwrite)
+ .option("path","") //where we want to store 
+ .save()
+
+//partitionBY(we will be able to skip some of partitions)
+
+orderRep.write
+ .format("csv")  
+ .partitionBy("order_status")
+ .mode(Savemode.Overwrite)
+ .option("path","")  
+ .save()
+
+//here if we use repartition and partitionBy col then //in each folder we have 4 files .because repartition //is 4
+
+//bucket by takes fixed no of buccket 
+
+//maxRecordsPerFile -> we have to define max value //per file.dont want more then 2000 records  
+
+orderDf.write
+ .format("csv")  
+ .partitionBy("order_status")
+ .mode(Savemode.Overwrite)
+ .option("maxRecordsPerFile",2000)
+ .option("path","") //where we want to store 
+ .save()
+
+-----------------------------------------------------
+
+Spark SQL 
+==========
+
+ val sparkConf = new SparkConf()
+  sparkConf.set("spark.app.name", "dataframeload example")
+  sparkConf.set("spark.master" ,"local[2]")
+  
+  val spark = SparkSession.builder()
+  .config(sparkConf)
+   .getOrCreate()
+  
+  
+  val ordersDf = spark.read
+  .format("csv")
+  .option("header", true)
+  .option("inferSchema" , true) 
+  .option("path","D:/Sumit sir BIg Data/Week-11/DataSet/orders.csv")
+  .load()
+  
+
+  //convert dataframe to table 
+
+  orderDf.createOrReplaceTempView("orders")
+  
+  spark.sql("select order_status,count(*),from order group by order_status order by status_count")
+
+  //output of sparksql is dataframe 
+  //order table is distributed across machines 
+
+
+  //performance is equal to dataframe 
+
+ //how many order each customer pleaced with closed status 
+
+ val resultDf = spark.sql("select order_customer_id,count(*) as totalorder from order where order_status='CLOSED' group by order_customer_id order by totalorder desc" )
+
+
+---------------------------------------------------
+
+
+how to store data in form of tables 
+=======================================
+when data is stored in the form of tables then we can connect tablues powerbi etc .. 
+
+
+val sparkConf = new SparkConf()
+  sparkConf.set("spark.app.name", "dataframeload example")
+  sparkConf.set("spark.master" ,"local[2]")
+  
+  val spark = SparkSession.builder()
+  .config(sparkConf)
+  .enableHiveSupport() //we are using hive first change here . i am using hive metastore to create metastore
+  .getOrCreate()
+  
+  
+  val ordersDf = spark.read
+  .format("csv")
+  .option("header", true)
+  .option("inferSchema" , true) 
+  .option("path","D:/Sumit sir BIg Data/Week-11/DataSet/orders.csv")
+  .load()
+
+//create own database 
+
+  spark.sql("create database if not exists retail_db")
+  
+
+
+  orderDf.write
+  .format("csv")
+  .mode(SaveMode.Overwrite)
+  .bucketBy(4,"order_customer_id")
+  .sortBy("order_customer_id")
+  .saveAsTable("retail_db.orders1") //stores in default database 
+
+  //list all tables 
+
+  spark.catalog.listTables("")
+
+
+
+
+
+
+
+
+  
+  
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+}
+
+
